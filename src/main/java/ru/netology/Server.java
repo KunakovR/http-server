@@ -7,36 +7,30 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class Server implements Runnable {
+public class Server {
 
-    private ServerSocket serverSocket;
-    private CopyOnWriteArraySet<Connection> connections;
-    private ExecutorService pool;
-    private final List<String> validPaths;
-
-    public Server() {
-        connections = new CopyOnWriteArraySet();
-        validPaths = List.of("/index.html", "/spring.svg", "/spring.png", "/resources.html", "/styles.css", "/app.js", "/links.html", "/forms.html", "/classic.html", "/events.html", "/events.js");
-    }
+    private static final int PORT = 9999;
+    private static final int THREAD_POOL_SIZE = 64;
+    private static final List<String> VALID_PATHS = List.of("/index.html", "/spring.svg", "/spring.png", "/resources.html", "/styles.css", "/app.js", "/links.html", "/forms.html", "/classic.html", "/events.html", "/events.js");
+    private final ExecutorService threadPool = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
 
     public static void main(String[] args) {
-        Server server = new Server();
-        server.run();
+        new Server().start();
     }
 
-    public void run() {
-        try {
-            serverSocket = new ServerSocket(9999);
-            pool = Executors.newFixedThreadPool(64);
+    public void start() {
+        try (final var serverSocket = new ServerSocket(PORT)) {
             while (true) {
-                Socket socket = serverSocket.accept();
-                Connection connection = new Connection(socket);
-                connections.add(connection);
-                pool.submit(connection);
+                try {
+                    final var socket = serverSocket.accept();
+                    Connection connection = new Connection(socket);
+                    threadPool.submit(connection);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -46,8 +40,6 @@ public class Server implements Runnable {
     class Connection implements Runnable {
 
         private final Socket socket;
-        private BufferedReader in;
-        private BufferedOutputStream out;
 
         public Connection(Socket socket) {
             this.socket = socket;
@@ -55,8 +47,8 @@ public class Server implements Runnable {
 
         public void run() {
             try {
-                in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-                out = new BufferedOutputStream(socket.getOutputStream());
+                final var in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                final var out = new BufferedOutputStream(socket.getOutputStream());
                 // read only request line for simplicity
                 // must be in form GET /path HTTP/1.1
                 final var requestLine = in.readLine();
@@ -69,7 +61,7 @@ public class Server implements Runnable {
                 }
 
                 final var path = parts[1];
-                if (!validPaths.contains(path)) {
+                if (!VALID_PATHS.contains(path)) {
                     out.write((
                             "HTTP/1.1 404 Not Found\r\n" +
                                     "Content-Length: 0\r\n" +
