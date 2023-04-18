@@ -3,6 +3,7 @@ package ru.netology;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
@@ -39,11 +40,13 @@ public class Server {
             InputStream inputStream = socket.getInputStream();
             final var out = new BufferedOutputStream(socket.getOutputStream());
             Request request = new Request(inputStream);
+            //Check RequestLine
             if (request.getStatus()) {
                 inputStream.close();
                 out.close();
                 socket.close();
             }
+            //Check handlers available
             String keyToFind = request.getMethod() + " " + request.getPath();
             for (String key : handlers.keySet()) {
                 if (key.equals(keyToFind)) {
@@ -54,7 +57,7 @@ public class Server {
                     socket.close();
                 }
             }
-
+            //If handlers not available, standard procedure
             if (!VALID_PATHS.contains(request.getPath())) {
                 out.write((
                         "HTTP/1.1 404 Not Found\r\n" +
@@ -96,7 +99,7 @@ public class Server {
             ).getBytes());
             Files.copy(filePath, out);
             out.flush();
-        } catch (IOException e) {
+        } catch (IOException | URISyntaxException e) {
         }
     }
 

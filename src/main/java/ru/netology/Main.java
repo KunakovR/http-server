@@ -17,7 +17,7 @@ public class Main {
                 responseStream.write((
                         "HTTP/1.1 200 OK\r\n" +
                                 "Content-Type: " + mimeType + "\r\n" +
-                                "Content-Length2: " + length + "\r\n" +
+                                "Content-Length: " + length + "\r\n" +
                                 "Connection: close\r\n" +
                                 "\r\n"
                 ).getBytes());
